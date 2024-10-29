@@ -1,2 +1,2 @@
-# Ganes
+# Games
 Affan Games 
