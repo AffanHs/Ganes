@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AffanHs</title>
+    <style>
+       body {
+            font-family: 'Roboto', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+        }
+        
+        .sudoku-board {
+            border: 2px solid #333;
+            margin: 20px;
+            background-color: #00eaff;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .row {
+            display: flex;
+        }
+        
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: transparent;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .cell input:disabled {
+            background-color: #fff200;
+            color: #000000;
+        }
+        
+        .cell.testing {
+            background-color: #fff3cd;
+            color: #000000;
+        }
+        
+        .cell.success {
+            background-color: #4aff08;
+            color: #000000;
+        }
+        
+        .cell.backtrack {
+            background-color: #ff0000;
+            color: #721c24;
+        }
+        
+        .cell:nth-child(3n) {
+            border-right: 2px solid #000000;
+        }
+        
+        .row:nth-child(3n) .cell {
+            border-bottom: 2px solid #000000;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .controls {
+            margin: 20px;
+        }
+        
+        .difficulty, .speed-control {
+            margin: 10px;
+        }
+        
+        .status {
+            margin: 10px;
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .green-box {
+            display: inline-block;
+            background-color: #d4edda;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: #00ff3c;
+            font-weight: bold;
+        }
+        
+        .yellow-box {
+            display: inline-block;
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .by-affanhs {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Game <span style="background-color: #00FF00; padding: 2px 4px;"> Sudoku</span> Brute Force </h1 color="background-color: #00FF00;">
+    <div class="difficulty">
+        <span style="background-color: #FFFF00; padding: 2px 4px;">Tingkat</span> <span style="background-color: #00FF00; padding: 2px 4px;">Kesulitan</span>: 
+        <select id="difficulty">
+            <option value="easy">Mudah (40-45 <span style="background-color: #00FF00; padding: 2px 4px;">sel</span> kosong)</option>
+            <option value="medium">Sedang (46-52 <span style="background-color: #00FF00; padding: 2px 4px;">sel</span> kosong)</option>
+            <option value="hard">Sulit (53-59 <span style="background-color: #00FF00; padding: 2px 4px;">sel</span> kosong)</option>
+        </select>
+    </div>
+    <div class="speed-control">
+        <span style="background-color: #FFFF00; padding: 2px 4px;">Kecepatan</span> <span style="background-color: #00FF00; padding: 2px 4px;">Animasi</span>: 
+        <select id="speed">
+            <option value="fast">Cepat (50ms)</option>
+            <option value="medium" selected>Sedang (100ms)</option>
+            <option value="slow">Lambat (200ms)</option>
+        </select>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="estimated-time" id="estimated-time"></div>
+    <div class="sudoku-board" id="board"></div>
+    <div class="controls">
+        <button onclick="generateRandomPuzzle()" id="generateBtn">Buat <span style="background-color: #00FF00; padding: 2px 4px;">Puzzle</span> Baru</button>
+        <button onclick="startSolving()" id="solveBtn">Selesaikan <span style="background-color: #00FF00; padding: 2px 4px;">Puzzle</span></button>
+        <button onclick="resetBoard()" id="resetBtn">Reset <span style="background-color: #00FF00; padding: 2px 4px;">Papan</span></button>
+    </div>
+    <div class="by-affanhs">by AffanHs</div>
+
+
+
+    <script>
+        let board = Array(9).fill().map(() => Array(9).fill(0));
+        let initialBoard = Array(9).fill().map(() => Array(9).fill(0));
+        let solving = false;
+        let cells = [];
+
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            cells = [];
+            
+            for (let i = 0; i < 9; i++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                cells[i] = [];
+                
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.min = '1';
+                    input.max = '9';
+                    input.value = board[i][j] || '';
+                    
+                    if (initialBoard[i][j] !== 0) {
+                        input.disabled = true;
+                    }
+                    
+                    input.addEventListener('input', (e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        if (val >= 0 && val <= 9) {
+                            board[i][j] = val;
+                        }
+                    });
+                    
+                    cell.appendChild(input);
+                    row.appendChild(cell);
+                    cells[i][j] = cell;
+                }
+                boardDiv.appendChild(row);
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        async function delay() {
+            const speed = document.getElementById('speed').value;
+            const delays = { fast: 50, medium: 100, slow: 200 };
+            await new Promise(resolve => setTimeout(resolve, delays[speed]));
+        }
+
+        function clearCellStyles() {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    cells[i][j].className = 'cell';
+                }
+            }
+        }
+
+        async function solveSudokuWithAnimation() {
+            const empty = findEmpty(board);
+            if (!empty) {
+                updateStatus('Puzzle selesai!');
+                return true;
+            }
+            
+            const [row, col] = empty;
+            cells[row][col].className = 'cell testing';
+            updateStatus(`Mencoba mengisi sel (${row + 1},${col + 1})`);
+            await delay();
+            
+            for (let num = 1; num <= 9; num++) {
+                if (isValid(num, [row, col], board)) {
+                    board[row][col] = num;
+                    cells[row][col].querySelector('input').value = num;
+                    cells[row][col].className = 'cell success';
+                    updateStatus(`Menempatkan ${num} di sel (${row + 1},${col + 1})`);
+                    await delay();
+                    
+                    if (await solveSudokuWithAnimation()) {
+                        return true;
+                    }
+                    
+                    updateStatus(`Backtracking dari sel (${row + 1},${col + 1})`);
+                    board[row][col] = 0;
+                    cells[row][col].querySelector('input').value = '';
+                    cells[row][col].className = 'cell backtrack';
+                    await delay();
+                }
+            }
+            
+            cells[row][col].className = 'cell';
+            return false;
+        }
+        
+        function isValid(num, pos, board) {
+            const [row, col] = pos;
+            
+            for (let i = 0; i < 9; i++) {
+                if (board[row][i] === num && i !== col) return false;
+            }
+            
+            for (let i = 0; i < 9; i++) {
+                if (board[i][col] === num && i !== row) return false;
+            }
+            
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            
+            for (let i = boxRow; i < boxRow + 3; i++) {
+                for (let j = boxCol; j < boxCol + 3; j++) {
+                    if (board[i][j] === num && (i !== row || j !== col)) return false;
+                }
+            }
+            
+            return true;
+        }
+
+        function findEmpty(board) {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] === 0) return [i, j];
+                }
+            }
+            return null;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function startSolving() {
+            if (solving) return;
+            
+            solving = true;
+            document.getElementById('solveBtn').disabled = true;
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = true;
+            
+            clearCellStyles();
+            updateStatus('Memulai penyelesaian...');
+            
+            if (await solveSudokuWithAnimation()) {
+                updateStatus('Puzzle berhasil diselesaikan!');
+            } else {
+                updateStatus('Tidak ada solusi yang valid!');
+            }
+            
+            solving = false;
+            document.getElementById('solveBtn').disabled = false;
+            document.getElementById('generateBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+        }
+
+        function generateRandomPuzzle() {
+            updateStatus('Membuat puzzle baru...');
+            board = Array(9).fill().map(() => Array(9).fill(0));
+            
+            const numbers = shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    board[i][j] = numbers[i * 3 + j];
+                }
+            }
+            
+            solve(board);
+            const solution = board.map(row => [...row]);
+            
+            const difficulty = document.getElementById('difficulty').value;
+            let cellsToRemove;
+            
+            switch(difficulty) {
+                case 'easy':
+                    cellsToRemove = Math.floor(Math.random() * 6) + 40;
+                    break;
+                case 'medium':
+                    cellsToRemove = Math.floor(Math.random() * 7) + 46;
+                    break;
+                case 'hard':
+                    cellsToRemove = Math.floor(Math.random() * 7) + 53;
+                    break;
+            }
+            
+            while (cellsToRemove > 0) {
+                const row = Math.floor(Math.random() * 9);
+                const col = Math.floor(Math.random() * 9);
+                
+                if (board[row][col] !== 0) {
+                    board[row][col] = 0;
+                    cellsToRemove--;
+                }
+            }
+            
+            initialBoard = board.map(row => [...row]);
+            createBoard();
+            updateStatus('Puzzle baru siap!');
+        }
+
+        function solve(board) {
+            const empty = findEmpty(board);
+            if (!empty) return true;
+            
+            const [row, col] = empty;
+            
+            for (let num = 1; num <= 9; num++) {
+                if (isValid(num, [row, col], board)) {
+                    board[row][col] = num;
+                    if (solve(board)) return true;
+                    board[row][col] = 0;
+                }
+            }
+            
+            return false;
+        }
+
+        function resetBoard() {
+            clearCellStyles();
+            board = initialBoard.map(row => [...row]);
+            createBoard();
+            updateStatus('Papan direset ke posisi awal');
+        }
+
+        generateRandomPuzzle();
+    </script>
+</body>
+</html>
